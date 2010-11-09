@@ -1,5 +1,5 @@
 -module(parangone).
--export([http/1,start/0, rpc/2,timecount/1,stress/3,httpcount200/1]).
+-export([http/1,start/0, rpc/2,timecount/1,stress/3,makedict/1]).
 
 start() ->
     register(parangon, spawn(fun() -> loop() end)).
@@ -36,7 +36,14 @@ http(Url) ->
 	    Return
     end.
 
-httpcount200([]) ->
-    0 ;
-httpcount200([{Time, 200}|T]) ->
-    Time + httpcount200(T).
+makedict(List) ->
+	       makedict(List, dict:new()).
+
+makedict([], Dict) ->
+    dict:map(fun(_, List)
+		-> { lists:sum(List) / length(List) }
+	     end,
+	     Dict);
+makedict([{Time, Code}|T], Dict) ->
+    makedict(T, dict:append(Code, Time, Dict)).
+
