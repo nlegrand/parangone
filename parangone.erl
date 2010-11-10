@@ -38,8 +38,8 @@ http(Url) ->
 	    Return
     end.
 
-sort_response(List) ->
-	       makedict(List, dict:new()).
+sort_response(Response_List) ->
+	       makedict(Response_List, dict:new()).
 
 sort_response([], Dict) ->
     dict:map(fun(_, List)
