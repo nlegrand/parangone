@@ -1,5 +1,5 @@
 -module(parangone).
--export([http/1,start/0, rpc/2,timecount/1,stress/3,makedict/1]).
+-export([http/1,start/0, rpc/2,timecount/1,stress/1,sort_response/1]).
 
 start() ->
     register(parangon, spawn(fun() -> loop() end)).
@@ -10,7 +10,10 @@ timecount(Fun) ->
     {_, Time} = statistics(wall_clock),
     {Time, Result}.
 
-stress(_, 0, List)    ->
+stress(Fun, Time) ->
+    stress(Fun, Time, []).
+
+stress(_, 0, List) ->
     List;
 stress(Fun, Time, List) ->
     stress(Fun, Time - 1, [timecount(Fun)|List]).
@@ -27,7 +30,6 @@ loop() ->
         {From, Fun, Time} ->
             From ! {parangon, stress(Fun, Time, [])},
             loop()
-
     end.
 
 http(Url) ->
@@ -36,14 +38,14 @@ http(Url) ->
 	    Return
     end.
 
-makedict(List) ->
+sort_response(List) ->
 	       makedict(List, dict:new()).
 
-makedict([], Dict) ->
+sort_response([], Dict) ->
     dict:map(fun(_, List)
 		-> { lists:sum(List) / length(List) }
 	     end,
 	     Dict);
-makedict([{Time, Code}|T], Dict) ->
+sort_response([{Time, Code}|T], Dict) ->
     makedict(T, dict:append(Code, Time, Dict)).
 
