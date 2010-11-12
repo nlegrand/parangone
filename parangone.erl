@@ -1,5 +1,5 @@
 -module(parangone).
--export([http/1,start/0, rpc/2,timecount/1,stress/1,sort_response/1]).
+-export([http/1,start/0, rpc/2,timecount/1,stress/2,sort_response/1]).
 
 start() ->
     register(parangon, spawn(fun() -> loop() end)).
@@ -39,7 +39,7 @@ http(Url) ->
     end.
 
 sort_response(Response_List) ->
-	       makedict(Response_List, dict:new()).
+	       sort_response(Response_List, dict:new()).
 
 sort_response([], Dict) ->
     dict:map(fun(_, List)
@@ -47,5 +47,5 @@ sort_response([], Dict) ->
 	     end,
 	     Dict);
 sort_response([{Time, Code}|T], Dict) ->
-    makedict(T, dict:append(Code, Time, Dict)).
+    sort_response(T, dict:append(Code, Time, Dict)).
 
