@@ -21,14 +21,14 @@ stress(Fun, Time, List) ->
 rpc(Fun, Time) ->
     parangon ! {self(), Fun, Time},
     receive
-        {parangon, Response} ->
-            Response
+        {parangon, Node, Response} ->
+            {Node, Response}
     end.
 
 loop() ->
     receive
         {From, Fun, Time} ->
-            From ! {parangon, stress(Fun, Time, [])},
+            From ! {parangon, node(), stress(Fun, Time, [])},
             loop()
     end.
 
