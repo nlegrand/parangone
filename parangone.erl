@@ -64,8 +64,11 @@ new(Session, Fun, Time) -> gen_server:call(?MODULE, {new, Session, Fun, Time}).
 remove(Session) ->
     gen_server:call(?MODULE, {remove, Session}).
 
-%all_sessions() ->
-%    gen_server:call(?MODULE, {all_sessions, Session})
+remove_all() ->
+    gen_server:call(?MODULE, remove_all).
+
+all_sessions() ->
+    gen_server:call(?MODULE, all_sessions).
 
 get(Session) ->
     gen_server:call(?MODULE, {get, Session}).
@@ -114,9 +117,14 @@ handle_call({remove, Session}, _From, Tab) ->
 		[] -> {Session, does_not_exists};
 		[{Session, _}] ->
 		    ets:delete(Tab, Session),
-		    {Session, deleted}
+		    {Session, removed}
 	    end,
     {reply, Reply, Tab};
+handle_call(all_sessions, _From, Tab) ->
+    {reply, get_tab_keys(Tab), Tab};
+handle_call(remove_all, _From, Tab) ->
+    ets:delete(Tab),
+    {reply, all_removed, ets:new(?MODULE,[])};
 handle_call({get, Session}, _From, Tab) ->
     Reply = case ets:lookup(Tab, Session) of
 		[] -> {Session, does_not_exists};
@@ -208,3 +216,11 @@ sort_response([], Dict) ->
 sort_response([{Time, Code}|T], Dict) ->
     sort_response(T, dict:append(Code, Time, Dict)).
 
+get_tab_keys(Tab) ->
+    get_tab_keys(Tab, ets:first(Tab), []).
+
+get_tab_keys(Tab, Key, ListOfKeys) ->
+    case Key of
+	'$end_of_table' -> ListOfKeys;
+	_ -> get_tab_keys(Tab, ets:next(Tab, Key), [Key] ++ ListOfKeys)
+    end.
