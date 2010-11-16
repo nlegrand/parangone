@@ -22,7 +22,7 @@
 -module(parangone_mod_http).
 
 %% API
--export([start/0, stop/0, http/1]).
+-export([start/0, stop/0, get/1]).
 
 %%%===================================================================
 %%% API
@@ -42,8 +42,11 @@ stop() ->
 
 get(Url) ->
     fun() ->
-	    {_,{{_,Return,_},_,_}} = httpc:request(Url),
-	    Return
+	    Response = case httpc:request(Url) of
+			   {_,{{_,Return,_},_,_}} -> Return;
+			   Res -> Res
+		       end,
+	    Response
     end.
 
 %%%===================================================================
