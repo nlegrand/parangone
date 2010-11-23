@@ -131,7 +131,7 @@ handle_call({get, Session}, _From, Tab) ->
 		[{Session, _}] ->
 		    ets:lookup(Tab, Session)
 	    end,
-    {reply, Reply, Tab};
+    {reply, {node(), Reply}, Tab};
 handle_call(stop, _From, Tab) ->
     {stop, normal, stopped, Tab}.
 
