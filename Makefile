@@ -5,16 +5,11 @@ PREFIX=/usr/local/
 .erl.beam:
 	erlc -W $<
 
-ERL = erl -boot start_clean
-
-MODS = parangone parangone_mod_http
+MODS = parangonebla parangone_mod_httpbla
 
 all: compile
 
 compile: ${MODS:%=%.beam}
-
-echo:
-	echo ${MODS:%=%.beam}
 
 clean:
 	rm -rf *.beam erl_crash.dump
