@@ -5,7 +5,7 @@ PREFIX=/usr/local/
 .erl.beam:
 	erlc -W $<
 
-MODS = parangonebla parangone_mod_httpbla
+MODS = parangone parangone_mod_http
 
 all: compile
 
