@@ -53,22 +53,73 @@ start() ->
 %% @doc
 %% Stops the server
 %%
-%% @spec stop() -> {ok, Dict}
+%% @spec stop() -> {ok, Tab}
+%%       Tab = 
 %% @end
 %%--------------------------------------------------------------------
 
 stop() -> gen_server:call(?MODULE, stop).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Create a new Session. Each session will be a key to the
+%% benchmark result: a list of tuple {Time, Result}
+%%
+%% @spec new() -> {ok, Session}
+%%       Session = atom()
+%% @end
+%%--------------------------------------------------------------------
+
 new(Session, Fun, Time) -> gen_server:call(?MODULE, {new, Session, Fun, Time}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Remove Session from the ets Tab.
+%%
+%% @spec remove(Session) -> {ok, Session} |
+%%                          {Session, does_not_exist}
+%%       Session = atom()
+%% @end
+%%--------------------------------------------------------------------
 
 remove(Session) ->
     gen_server:call(?MODULE, {remove, Session}).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Remove all sessions from the ets Tab. Actually it recreate an ets
+%%
+%% @spec remove(Session) -> all_removed
+%% @end
+%%--------------------------------------------------------------------
+
 remove_all() ->
     gen_server:call(?MODULE, remove_all).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% List all sessions recorded so far in the ets
+%%
+%% @spec all_sessions() -> [Session]
+%%       Session = atom()
+%% @end
+%%--------------------------------------------------------------------
+
 all_sessions() ->
     gen_server:call(?MODULE, all_sessions).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Send the result of a session, the Code return is defined by the Fun
+%% the user is sending to paragone. In the mod_http example, we use
+%% the HTTP integer() as Code_return.
+%%
+%% @spec get_session() -> {node(), [{Time, Result}]}
+%%       Session = atom()
+%%       Time = integer()
+%%       Result = integer() | atom() | string() | term()
+%% @end
+%%--------------------------------------------------------------------
 
 get(Session) ->
     gen_server:call(?MODULE, {get, Session}).
@@ -82,13 +133,13 @@ get(Session) ->
 %% @doc
 %% Initializes the server
 %%
-%% @spec init(Args) -> {ok, Tab} |
-%%                     {ok, Tab, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
+%% @spec init() -> {ok, Tab} |
+%%                 {ok, Tab, Timeout} |
+%%                 ignore |
+%%                 {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->
+init() ->
     {ok, ets:new(?MODULE,[])}.
 
 %%--------------------------------------------------------------------
@@ -103,18 +154,19 @@ init([]) ->
 %%                                   {noreply, Tab, Timeout} |
 %%                                   {stop, Reason, Reply, Tab} |
 %%                                   {stop, Reason, Tab}
+%%       Tab = tid()
 %% @end
 %%--------------------------------------------------------------------
 handle_call({new, Session, Fun, Time}, _From, Tab) ->
     Reply = case ets:lookup(Tab, Session) of
 		[] -> ets:insert(Tab, {Session, stress(Fun, Time)}),
 		      {ok, Session};
-		[_] -> {Session, already_exists}
+		[_] -> {Session, already_exist}
 	    end,
     {reply, Reply, Tab} ;
 handle_call({remove, Session}, _From, Tab) ->
     Reply = case ets:lookup(Tab, Session) of
-		[] -> {Session, does_not_exists};
+		[] -> {Session, does_not_exist};
 		[{Session, _}] ->
 		    ets:delete(Tab, Session),
 		    {Session, removed}
@@ -191,36 +243,99 @@ code_change(_OldVsn, Tab, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% The time counter, heart of parangone. The Fun passed is user define
+%% so the Result is user define. It should be something easily usable
+%% as a Dict entry to sort the results properly.
+%%
+%% @spec code_change(Fun) -> {Time, Result}
+%%       Time = integer()
+%%       Result = integer() | atom() | string() | term()
+%% @end
+%%--------------------------------------------------------------------
+
 timecount(Fun) ->
     statistics(wall_clock),
     Result = Fun(),
     {_, Time} = statistics(wall_clock),
     {Time, Result}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Init stress/3 with empty list
+%%
+%% @spec stress(Fun, Time) -> stress/3
+%%       stress = function()
+%% @end
+%%--------------------------------------------------------------------
+
 stress(Fun, Time) ->
     stress(Fun, Time, []).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Apply Fun as many Time to timecount, and return list of timecount
+%% results
+%%
+%% @spec stress(Fun, Time, List) -> [{Time, Result}]
+%%       Time = integer()
+%%       Result = integer() | atom() | string() | term()
+%% @end
+%%--------------------------------------------------------------------
 
 stress(_, 0, List) ->
     List;
 stress(Fun, Time, List) ->
     stress(Fun, Time - 1, [timecount(Fun)|List]).
 
-%sort_response(Response_List) ->
-%	       sort_response(Response_List, dict:new()).
-
-sort_response([], Dict) ->
-    dict:map(fun(_, List)
-		-> { lists:sum(List) / length(List) }
-	     end,
-	     Dict);
-sort_response([{Time, Code}|T], Dict) ->
-    sort_response(T, dict:append(Code, Time, Dict)).
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Initiate get_tab_keys/3
+%%
+%% @spec stress(Tab) -> get_tab_keys/3
+%%       get_tab_keys = function()
+%% @end
+%%--------------------------------------------------------------------
 
 get_tab_keys(Tab) ->
     get_tab_keys(Tab, ets:first(Tab), []).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Retrieve all keys from an ets
+%%
+%% @spec stress(Tab, Key, ListOfKeys) -> [Keys]
+%%       Keys = integer() | atom() | string() | term()
+%% @end
+%%--------------------------------------------------------------------
 
 get_tab_keys(Tab, Key, ListOfKeys) ->
     case Key of
 	'$end_of_table' -> ListOfKeys;
 	_ -> get_tab_keys(Tab, ets:next(Tab, Key), [Key] ++ ListOfKeys)
     end.
+
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Sort the response in a Dict, putting each same Result as key of the
+%% dict and the average time elapsed for this Result as value
+%%
+%% @spec sort_response(Fun, Time, List) -> Dict
+%% @end
+%%--------------------------------------------------------------------
+
+sort_response([], Dict) ->
+    dict:map(fun(_, List)
+		-> { lists:sum(List) / length(List) }
+	     end,
+	     Dict);
+sort_response([{Time, Result}|T], Dict) ->
+    sort_response(T, dict:append(Code, Result, Dict)).
