@@ -139,7 +139,7 @@ get(Session) ->
 %%                 {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init() ->
+init([]) ->
     {ok, ets:new(?MODULE,[])}.
 
 %%--------------------------------------------------------------------
@@ -338,4 +338,4 @@ sort_response([], Dict) ->
 	     end,
 	     Dict);
 sort_response([{Time, Result}|T], Dict) ->
-    sort_response(T, dict:append(Code, Result, Dict)).
+    sort_response(T, dict:append(Result, Time, Dict)).
