@@ -22,7 +22,7 @@
 -module(parangone_mod_http).
 
 %% API
--export([get/1, get_deprecated/1]).
+-export([get/1]).
 
 %%%===================================================================
 %%% API
@@ -37,15 +37,6 @@
 get(Url) ->
     fun() ->
 	    Response = case httpc:request(Url) of
-			   {_,{{_,Return,_},_,_}} -> Return;
-			   Res -> Res
-		       end,
-	    Response
-    end.
-
-get_deprecated(Url) ->
-    fun() ->
-	    Response = case http:request(Url) of
 			   {_,{{_,Return,_},_,_}} -> Return;
 			   Res -> Res
 		       end,
