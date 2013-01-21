@@ -30,7 +30,10 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%% @spec
+%% Return a Fun containing a formed httpc:request() ready to be launched.
+%% Remember to start inets first (inets:start()).
+%%
+%% @spec get(Url) -> Fun()
 %% @end
 %%--------------------------------------------------------------------
 
